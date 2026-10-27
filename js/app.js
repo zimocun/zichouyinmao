@@ -441,7 +441,7 @@
   }
 
   var B = (function () {
-    var d = { mode: 'solar', y: 1990, m: 1, d: 1, h: 12, mi: 0, tz: 480, noTime: false };
+    var d = { mode: 'solar', y: 1993, m: 6, d: 24, h: 12, mi: 30, tz: 480, noTime: false };
     try { var v = JSON.parse(localStorage.getItem('zcym.bazi') || 'null'); if (v) for (var k in d) if (k in v) d[k] = v[k]; } catch (e) {}
     return d;
   })();
