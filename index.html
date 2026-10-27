@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="子丑寅卯">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#1c1c1e">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-32.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+<title>子丑寅卯</title>
+</head>
+<body>
+<div id="app">
+  <main id="views">
+    <section class="view active" id="v-cal"></section>
+    <section class="view" id="v-alm"></section>
+    <section class="view" id="v-bazi"></section>
+  </main>
+  <nav id="tabbar">
+    <button class="tab active" data-tab="cal">
+      <span class="ti ti-cal"><b id="tabDay">1</b></span><span>万年历</span>
+    </button>
+    <button class="tab" data-tab="alm">
+      <span class="ti">
+        <svg viewBox="0 0 32 32" width="26" height="26"><circle cx="16" cy="16" r="13" fill="currentColor" opacity=".25"/><path d="M16 3a13 13 0 0 1 0 26a6.5 6.5 0 0 1 0-13a6.5 6.5 0 0 0 0-13z" fill="currentColor"/><circle cx="16" cy="9.5" r="2" fill="currentColor" opacity=".25"/><circle cx="16" cy="22.5" r="2" fill="currentColor"/></svg>
+      </span><span>黄历</span>
+    </button>
+    <button class="tab" data-tab="bazi">
+      <span class="ti"><span class="ti-bz">八</span></span><span>八字</span>
+    </button>
+  </nav>
+  <div id="page" class="page" aria-hidden="true">
+    <header class="topbar"><button class="ib" data-act="back" aria-label="返回">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path d="M15 4l-8 8l8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button><h1 id="pageTitle"></h1><span class="ib"></span></header>
+    <div class="page-body" id="pageBody"></div>
+  </div>
+  <div id="toast"></div>
+</div>
+<script src="js/lunar.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
