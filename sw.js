@@ -1,5 +1,5 @@
 // 离线缓存：先用缓存秒开，同时在后台取新版本
-var CACHE = 'zcym-v6';
+var CACHE = 'zcym-v7';
 var FILES = ['./', 'index.html', 'css/app.css', 'js/lunar.js', 'js/data.js', 'js/app.js', 'fonts/serif.woff',
   'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-32.png'];
 

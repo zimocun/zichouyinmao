@@ -480,21 +480,9 @@
     var v = $('#v-bazi');
     var sol = Solar.fromYmdHms(B.y, B.m, B.d, B.h, B.mi, 0), lun = sol.getLunar();
 
-    var dateRow;
-    if (B.mode === 'solar') {
-      dateRow = '<input type="date" id="bzDate" min="1900-02-01" max="2100-12-31" value="' + B.y + '-' + pad(B.m) + '-' + pad(B.d) + '">';
-    } else {
-      var ly = lun.getYear(), yo = '', mo = '', dd = '';
-      for (var y = 1900; y <= 2100; y++) yo += opt(y, y + '年', y === ly);
-      LunarYear.fromYear(ly).getMonths().forEach(function (mm) {
-        if (mm.getYear() !== ly) return;
-        var mv = mm.getMonth();
-        mo += opt(mv, (mv < 0 ? '闰' : '') + LunarUtil.MONTH[Math.abs(mv)] + '月', mv === lun.getMonth());
-      });
-      var dc = LunarMonth.fromYm(ly, lun.getMonth()).getDayCount();
-      for (var i = 1; i <= dc; i++) dd += opt(i, LDAY[i - 1], i === lun.getDay());
-      dateRow = '<div class="bz-sel"><select id="bzLy">' + yo + '</select><select id="bzLm">' + mo + '</select><select id="bzLd">' + dd + '</select></div>';
-    }
+    var dateRow = '<button class="bz-pick" data-act="wopen">' +
+      (B.mode === 'solar' ? B.y + '年' + B.m + '月' + B.d + '日' : lun.getYear() + '年 ' + lun.getMonthInChinese() + '月 ' + lun.getDayInChinese()) +
+      '<i class="caret"></i></button>';
     var tzo = TZS.map(function (o) { return opt(o, tzLabel(o), o === B.tz); }).join('');
 
     var p = pillarsAt(B.y, B.m, B.d, B.h, B.mi, B.tz);
@@ -550,27 +538,104 @@
   function bzSetSolar(s) { B.y = s.getYear(); B.m = s.getMonth(); B.d = s.getDay(); }
 
   function bzChange(t) {
-    if (t.id === 'bzDate' && t.value) {
-      var a = t.value.split('-'); B.y = +a[0]; B.m = +a[1]; B.d = +a[2];
-    } else if (t.id === 'bzTime' && t.value) {
+    if (t.id === 'bzTime' && t.value) {
       var b = t.value.split(':'); B.h = +b[0]; B.mi = +b[1];
     } else if (t.id === 'bzTz') {
       B.tz = +t.value;
-    } else if (t.id === 'bzLy' || t.id === 'bzLm' || t.id === 'bzLd') {
-      var ly = +$('#bzLy').value, lm = +$('#bzLm').value, ld = +$('#bzLd').value;
-      if (t.id === 'bzLy') {
-        // 换年后若没有这个闰月就退回本月
-        var ok = LunarYear.fromYear(ly).getMonths().some(function (mm) { return mm.getYear() === ly && mm.getMonth() === lm; });
-        if (!ok) lm = Math.abs(lm);
-      }
-      ld = Math.min(ld, LunarMonth.fromYm(ly, lm).getDayCount());
-      bzSetSolar(Lunar.fromYmd(ly, lm, ld).getSolar());
     } else {
       return false;
     }
     saveB();
     renderBazi();
     return true;
+  }
+
+  // ---------- 年月日滚轮 ----------
+  var WH = 40, W = null;
+
+  function wheelItems(k) {
+    var a = [], i;
+    if (k === 'y') {
+      for (i = 1901; i <= 2099; i++) a.push({ v: i, t: i + '年' });
+    } else if (k === 'm') {
+      if (W.mode === 'solar') {
+        for (i = 1; i <= 12; i++) a.push({ v: i, t: i + '月' });
+      } else {
+        LunarYear.fromYear(W.y).getMonths().forEach(function (mm) {
+          if (mm.getYear() !== W.y) return;
+          var mv = mm.getMonth();
+          a.push({ v: mv, t: (mv < 0 ? '闰' : '') + LunarUtil.MONTH[Math.abs(mv)] + '月' });
+        });
+      }
+    } else {
+      var n = W.mode === 'solar' ? SolarUtil.getDaysOfMonth(W.y, W.m) : LunarMonth.fromYm(W.y, W.m).getDayCount();
+      for (i = 1; i <= n; i++) a.push({ v: i, t: W.mode === 'solar' ? i + '日' : LDAY[i - 1] });
+    }
+    return a;
+  }
+
+  function buildCol(k) {
+    var items = wheelItems(k), idx = 0;
+    items.forEach(function (it, i) { if (it.v === W[k]) idx = i; });
+    if (!items.some(function (it) { return it.v === W[k]; })) {
+      // 没有这一项（如换年后没有该闰月、小月没有30日）就取最接近的
+      if (k === 'm') { var am = Math.abs(W.m); items.forEach(function (it, i) { if (it.v === am) idx = i; }); }
+      else if (k === 'd') idx = items.length - 1;
+      W[k] = items[idx].v;
+    }
+    var col = $('#wheels .wcol[data-k="' + k + '"]');
+    col.innerHTML = '<div class="wsp"></div>' + items.map(function (it, i) {
+      return '<div class="witem' + (i === idx ? ' on' : '') + '" data-i="' + i + '">' + it.t + '</div>';
+    }).join('') + '<div class="wsp"></div>';
+    col._items = items;
+    col.scrollTop = idx * WH;
+  }
+
+  function openWheel() {
+    var lun = Solar.fromYmd(B.y, B.m, B.d).getLunar();
+    W = B.mode === 'solar' ? { mode: 'solar', y: B.y, m: B.m, d: B.d } : { mode: 'lunar', y: lun.getYear(), m: lun.getMonth(), d: lun.getDay() };
+    $('#wTitle').textContent = B.mode === 'solar' ? '阳历出生日期' : '阴历出生日期';
+    $('#wheels').innerHTML = ['y', 'm', 'd'].map(function (k) { return '<div class="wcol" data-k="' + k + '"></div>'; }).join('');
+    $('#sheet').classList.add('open');
+    ['y', 'm', 'd'].forEach(function (k) {
+      buildCol(k);
+      $('#wheels .wcol[data-k="' + k + '"]').addEventListener('scroll', onWheelScroll, { passive: true });
+    });
+  }
+
+  function onWheelScroll(e) {
+    var col = e.currentTarget, idx = Math.max(0, Math.min(col._items.length - 1, Math.round(col.scrollTop / WH)));
+    if (col._idx !== idx) {
+      var on = col.querySelector('.witem.on');
+      if (on) on.classList.remove('on');
+      var it = col.querySelector('.witem[data-i="' + idx + '"]');
+      if (it) it.classList.add('on');
+      col._idx = idx;
+    }
+    clearTimeout(col._t);
+    col._t = setTimeout(function () { settleCol(col); }, 120);
+  }
+
+  function settleCol(col) {
+    var k = col.dataset.k, idx = Math.max(0, Math.min(col._items.length - 1, Math.round(col.scrollTop / WH)));
+    var v = col._items[idx].v;
+    if (W[k] === v) return;
+    W[k] = v;
+    if (k === 'y' && W.mode === 'lunar') buildCol('m');
+    if (k !== 'd') buildCol('d');
+  }
+
+  function closeWheel(ok) {
+    if (ok && W) {
+      // 先把还在滚动中的列定下来
+      document.querySelectorAll('#wheels .wcol').forEach(function (c) { clearTimeout(c._t); settleCol(c); });
+      if (W.mode === 'solar') { B.y = W.y; B.m = W.m; B.d = W.d; }
+      else bzSetSolar(Lunar.fromYmd(W.y, W.m, W.d).getSolar());
+      saveB();
+      renderBazi();
+    }
+    $('#sheet').classList.remove('open');
+    W = null;
   }
 
   // ---------- 切换 ----------
@@ -619,6 +684,9 @@
     var up = e.target.closest('.up-row');
     if (up) { setSel(parseYmd(up.dataset.d)); renderCal(); scrollTop('cal'); return; }
 
+    var wi = e.target.closest('#wheels .witem');
+    if (wi) { wi.parentNode.scrollTo({ top: +wi.dataset.i * WH, behavior: 'smooth' }); return; }
+
     var a = e.target.closest('[data-act]');
     if (!a) return;
     var act = a.dataset.act;
@@ -644,6 +712,9 @@
       case 'zavoid': Z.avoid = a.dataset.v; renderZeji(); break;
       case 'zwk': Z.weekend = !Z.weekend; renderZeji(); break;
       case 'zhd': Z.hd = !Z.hd; renderZeji(); break;
+      case 'wopen': openWheel(); break;
+      case 'wok': closeWheel(true); break;
+      case 'wcancel': closeWheel(false); break;
       case 'bzmode': B.mode = a.dataset.v; saveB(); renderBazi(); break;
       case 'bznotime': B.noTime = !B.noTime; saveB(); renderBazi(); break;
       case 'pickDay':
