@@ -40,6 +40,32 @@
     return n > 0 ? n + '天后' : (-n) + '天前';
   }
 
+  // iOS 主屏幕全屏模式下，页面高度会少算状态栏那一截，底部留出空白；用屏幕实际高度撑满
+  function fitHeight() {
+    var h = window.innerHeight;
+    if (window.navigator.standalone) {
+      var land = Math.abs(window.orientation || 0) === 90;
+      var sh = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+      if (sh > h) h = sh;
+    }
+    document.documentElement.style.setProperty('--apph', h + 'px');
+  }
+  fitHeight();
+  window.addEventListener('resize', fitHeight);
+  window.addEventListener('orientationchange', function () { setTimeout(fitHeight, 300); });
+
+  // 标题栏固定在上方，下面的内容单独滚动；重画时保留滚动位置
+  function paint(v, head, body) {
+    var old = v.querySelector('.scroll'), st = old ? old.scrollTop : 0;
+    v.innerHTML = head + '<div class="scroll">' + body + '</div>';
+    v.querySelector('.scroll').scrollTop = st;
+  }
+
+  function scrollTop(tab) {
+    var sc = $('#v-' + tab + ' .scroll');
+    if (sc) sc.scrollTop = 0;
+  }
+
   var toastTimer;
   function toast(msg) {
     var t = $('#toast');
@@ -167,18 +193,18 @@
 
     var showToday = !(y === T.getYear() && m === T.getMonth() && sStr === tStr);
 
-    v.innerHTML =
+    paint(v,
       '<header class="topbar">' +
         '<span class="ib"></span>' +
         '<label class="mtitle">' + y + '年' + m + '月<i class="caret"></i>' +
           '<input type="month" id="monthInput" value="' + y + '-' + pad(m) + '"></label>' +
         (showToday ? '<button class="ib" data-act="today"><span class="today-btn" style="display:flex;align-items:center;justify-content:center">今</span></button>' : '<span class="ib"></span>') +
-      '</header>' +
+      '</header>',
       installTip() +
       '<div class="wk">' + wk + '</div>' +
       '<div class="grid' + (anim ? ' slide-' + anim : '') + '" id="calGrid">' + cells + '</div>' +
       detailHtml(S.sel) +
-      upcomingHtml();
+      upcomingHtml());
   }
 
   function detailHtml(s) {
@@ -258,7 +284,7 @@
       '<div class="alm-gz">' + gz4(s, l) + '<br>〔属' + l.getYearShengXiao() + '〕周' + WEEK[s.getWeek()] + '　第' + isoWeek(s) + '周</div>' +
       '<div class="clock" id="clock">' + clockText() + '</div>';
 
-    v.innerHTML = head + top + (S.seg === 'day' ? almDay(s, l) : almHours(s, l));
+    paint(v, head, top + (S.seg === 'day' ? almDay(s, l) : almHours(s, l)));
     if (anim) {
       var b = $('#almBig .big');
       b.style.animation = 'slide' + (anim === 'l' ? 'L' : 'R') + ' .22s ease-out';
@@ -490,8 +516,8 @@
     var cntTxt = Object.keys(cnt).map(function (k) { return '<span style="color:' + WX_COLOR[k] + '">' + k + cnt[k] + '</span>'; }).join(' ');
     var dg = p.d[0];
 
-    v.innerHTML =
-      '<header class="topbar"><span class="ib"></span><h1>八字</h1><span class="ib"></span></header>' +
+    paint(v,
+      '<header class="topbar"><span class="ib"></span><h1>八字</h1><span class="ib"></span></header>',
       '<div class="bz-form">' +
         '<div class="bz-row"><label>历法</label><div class="seg2">' +
           '<button data-act="bzmode" data-v="solar" class="' + (B.mode === 'solar' ? 'on' : '') + '">阳历</button>' +
@@ -518,7 +544,7 @@
         '<p><b>日主</b>' + dg + LunarUtil.WU_XING_GAN[dg] + '</p>' +
         '<p><b>五行</b>' + cntTxt + (miss.length ? '　缺' + miss.join('、') : '　五行俱全') + '</p>' +
         '<p class="bz-dim">年柱以立春、月柱以节气交节时刻为界；23点（子时）起日柱按次日。</p>' +
-      '</div>';
+      '</div>');
   }
 
   function bzSetSolar(s) { B.y = s.getYear(); B.m = s.getMonth(); B.d = s.getDay(); }
@@ -553,7 +579,7 @@
     document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
     document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'v-' + tab); });
     render();
-    $('#v-' + tab).scrollTop = 0;
+    scrollTop(tab);
   }
 
   function render(anim) {
@@ -591,7 +617,7 @@
     }
 
     var up = e.target.closest('.up-row');
-    if (up) { setSel(parseYmd(up.dataset.d)); renderCal(); $('#v-cal').scrollTop = 0; return; }
+    if (up) { setSel(parseYmd(up.dataset.d)); renderCal(); scrollTop('cal'); return; }
 
     var a = e.target.closest('[data-act]');
     if (!a) return;

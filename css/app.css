@@ -24,7 +24,7 @@
   --tabh: 56px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
+html, body { margin: 0; height: 100%; background: var(--bar); color: var(--text); overflow: hidden; }
 body {
   font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-size: 15px; line-height: 1.45;
@@ -32,14 +32,15 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-#app { position: fixed; inset: 0; display: flex; flex-direction: column; }
-#views { flex: 1; position: relative; overflow: hidden; }
-.view { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; padding-bottom: 24px; overscroll-behavior: contain; }
-.view.active { display: block; }
+#app { position: fixed; top: 0; left: 0; right: 0; height: var(--apph, 100%); display: flex; flex-direction: column; }
+#views { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+.view { position: absolute; inset: 0; display: none; flex-direction: column; overflow: hidden; }
+.view.active { display: flex; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 24px; }
 
 /* 顶栏 */
 .topbar {
-  position: sticky; top: 0; z-index: 5;
+  position: relative; flex: none; z-index: 5;
   display: flex; align-items: center; justify-content: space-between;
   padding: calc(var(--sat) + 6px) 10px 8px; min-height: calc(var(--sat) + 52px);
   background: var(--bar); border-bottom: 1px solid var(--line2);
@@ -162,9 +163,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .hnote { font-size: 12.5px; color: var(--text3); padding: 10px 16px; }
 
 /* 子页面（吉日查询） */
-.page { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .25s ease; }
+.page { position: fixed; top: 0; left: 0; right: 0; height: var(--apph, 100%); z-index: 20; background: var(--bg); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .25s ease; }
 .page.open { transform: none; }
-.page-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--sab) + 24px); }
+.page-body { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: calc(var(--sab) + 24px); }
 .sec { padding: 14px 16px 4px; }
 .sec h4 { margin: 0 0 10px; font-size: 14px; color: var(--text2); font-weight: 500; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
