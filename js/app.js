@@ -448,6 +448,69 @@
       (list || '<div class="empty">这段时间没有合适的日子，试试放宽条件</div>');
   }
 
+  // ---------- 佛历 ----------
+  function foZhai(f) {
+    var a = [];
+    if (f.isDayZhaiTen()) a.push('十斋日');
+    if (f.isDayZhaiSix()) a.push('六斋日');
+    if (f.isDayZhaiShuoWang()) a.push('朔望斋');
+    if (f.isDayZhaiGuanYin()) a.push('观音斋');
+    if (f.isMonthZhai()) a.push('三长斋月');
+    return a;
+  }
+
+  function renderFo(anim) {
+    var v = $('#v-fo');
+    var s = S.sel, l = s.getLunar(), f = Foto.fromLunar(l);
+    var head =
+      '<header class="topbar">' +
+        '<button class="ib" data-act="today" aria-label="回到今天"><span class="today-btn" style="display:flex;align-items:center;justify-content:center">今</span></button>' +
+        '<h1>佛历</h1><span class="ib"></span>' +
+      '</header>';
+
+    var zhai = foZhai(f);
+    var buddhist = f.getOtherFestivals();
+    var jie = f.getFestivals();
+    if (f.isDayYangGong() && !jie.some(function (x) { return x.getName() === '杨公忌'; })) jie = jie.concat([{ getName: function () { return '杨公忌'; }, getResult: function () { return ''; }, getRemark: function () { return ''; } }]);
+
+    var jieHtml = jie.length ? jie.map(function (x) {
+      var r = x.getResult(), m = x.getRemark();
+      return '<div class="fo-row"><span class="fo-nm">' + x.getName() + '</span>' +
+        (r ? '<span class="fo-res">' + r + '</span>' : '') + (m ? '<div class="fo-rm">' + m + '</div>' : '') + '</div>';
+    }).join('') : '<div class="fo-none">当日无戒期</div>';
+
+    // 近期佛教节日
+    var up = [];
+    for (var i = 1; i <= 150 && up.length < 8; i++) {
+      var sd = T.next(i), fd = Foto.fromLunar(sd.getLunar()), of = fd.getOtherFestivals();
+      if (of.length) up.push({ s: sd, f: fd, n: of.join(' · '), d: i });
+    }
+    var upHtml = up.map(function (o) {
+      return '<div class="up-row" data-act="foPick" data-d="' + ymd(o.s) + '"><div class="nm">' + o.n +
+        '<small>' + o.s.getMonth() + '月' + o.s.getDay() + '日 周' + WEEK[o.s.getWeek()] + ' · 农历' + o.f.getMonthInChinese() + '月' + o.f.getDayInChinese() + '</small></div>' +
+        '<div class="cnt">还有<b>' + o.d + '</b>天</div></div>';
+    }).join('');
+
+    var body =
+      '<div class="alm-date"><label class="dpick">' + s.getYear() + '年' + s.getMonth() + '月' + s.getDay() + '日<i class="caret"></i>' +
+        '<input type="date" id="dateInput" value="' + ymd(s) + '"></label></div>' +
+      '<div class="alm-big" id="foBig"><button class="arr" data-act="prevDay" aria-label="前一天">' + arrow('l') + '</button>' +
+        '<div class="big fo">' + f.getMonthInChinese() + '月' + f.getDayInChinese() + '</div>' +
+        '<button class="arr" data-act="nextDay" aria-label="后一天">' + arrow('r') + '</button></div>' +
+      '<div class="alm-gz">佛历' + f.getYearInChinese() + '年<br>农历' + l.getYearInGanZhi() + '年' + lunarText(l) + '　周' + WEEK[s.getWeek()] + '</div>' +
+      '<div class="fo-zhai">' + (zhai.length ? zhai.map(function (z) { return '<span class="tag fo">' + z + '</span>'; }).join('') : '<span class="fo-none">当日非斋日</span>') + '</div>' +
+      (buddhist.length ? '<div class="fo-card fo-hl"><h3>佛教节日</h3>' + buddhist.map(function (b) { return '<div class="fo-fest">' + b + '</div>'; }).join('') + '</div>' : '') +
+      '<div class="fo-card"><h3>戒期 · 神诞</h3>' + jieHtml + '</div>' +
+      '<div class="fo-card"><h3>二十八宿</h3><div class="fo-row"><span class="fo-nm">' + f.getXiu() + f.getZheng() + f.getAnimal() + '</span><span class="fo-res' + (f.getXiuLuck() === '吉' ? ' g' : '') + '">' + f.getXiuLuck() + '</span>' +
+        '<div class="fo-rm">' + f.getGong() + '方' + f.getShou() + '</div></div></div>' +
+      (upHtml ? '<div class="card"><h3>近期佛教节日</h3>' + upHtml + '</div>' : '') +
+      '<div class="fo-note">十斋日：每月初一、初八、十四、十五、十八、廿三、廿四、廿八、廿九、三十。' +
+        '六斋日：初八、十四、十五、廿三及月末两日。三长斋月：正月、五月、九月。戒期据传统戒期表，供修持参考。</div>';
+
+    paint(v, head, body);
+    if (anim) $('#foBig .big').style.animation = 'slide' + (anim === 'l' ? 'L' : 'R') + ' .22s ease-out';
+  }
+
   // ---------- 八字 ----------
   var WX_COLOR = { '木': '#4caf6a', '火': '#e5473c', '土': '#c08a3e', '金': '#e0b54a', '水': '#3d8bd9' };
   var SX_OF = { '子': '鼠', '丑': '牛', '寅': '虎', '卯': '兔', '辰': '龙', '巳': '蛇', '午': '马', '未': '羊', '申': '猴', '酉': '鸡', '戌': '狗', '亥': '猪' };
@@ -650,6 +713,7 @@
   function render(anim) {
     if (S.tab === 'cal') renderCal(anim);
     else if (S.tab === 'alm') renderAlm(anim);
+    else if (S.tab === 'fo') renderFo(anim);
     else renderBazi();
   }
 
@@ -664,7 +728,7 @@
 
   function moveDay(d) {
     setSel(S.sel.next(d));
-    renderAlm(d > 0 ? 'l' : 'r');
+    render(d > 0 ? 'l' : 'r');
   }
 
   // ---------- 事件 ----------
@@ -681,7 +745,7 @@
       return;
     }
 
-    var up = e.target.closest('.up-row');
+    var up = e.target.closest('.up-row:not([data-act])');
     if (up) { setSel(parseYmd(up.dataset.d)); renderCal(); scrollTop('cal'); return; }
 
     var wi = e.target.closest('#wheels .witem');
@@ -691,6 +755,7 @@
     if (!a) return;
     var act = a.dataset.act;
     switch (act) {
+      case 'foPick': setSel(parseYmd(a.dataset.d)); renderFo(); scrollTop('fo'); break;
       case 'today':
         T = today(); setSel(T); render(); break;
       case 'goAlm':
@@ -737,7 +802,7 @@
       renderCal();
     } else if (t.id === 'dateInput' && t.value) {
       setSel(parseYmd(t.value));
-      renderAlm();
+      render();
     }
   });
 
@@ -746,7 +811,7 @@
   // 左右滑动：万年历翻月，黄历翻日
   var sx = 0, sy = 0, sTarget = null;
   document.addEventListener('touchstart', function (e) {
-    var t = e.target.closest('#calGrid, #almBig');
+    var t = e.target.closest('#calGrid, #almBig, #foBig');
     sTarget = t ? t.id : null;
     sx = e.touches[0].clientX; sy = e.touches[0].clientY;
   }, { passive: true });
