@@ -529,13 +529,31 @@
     return t + (note || '');
   }
 
-  var B = (function () {
-    var d = { mode: 'solar', y: 1993, m: 6, d: 24, h: 12, mi: 30, tz: 480, noTime: false };
-    try { var v = JSON.parse(localStorage.getItem('zcym.bazi') || 'null'); if (v) for (var k in d) if (k in v) d[k] = v[k]; } catch (e) {}
+  var B_KEYS = ['mode', 'y', 'm', 'd', 'h', 'mi', 'tz', 'noTime'];
+  function bzDefault() { return { mode: 'solar', y: 2000, m: 1, d: 1, h: 12, mi: 0, tz: 480, noTime: false }; }
+  function bzLoad(key) {
+    try { var v = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
+    if (!v) return null;
+    var d = bzDefault();
+    B_KEYS.forEach(function (k) { if (k in v) d[k] = v[k]; });
     return d;
-  })();
+  }
+  function bzCopy(src) { var d = {}; B_KEYS.forEach(function (k) { d[k] = src[k]; }); return d; }
+  function bzSame(a, b) { return !!a && !!b && B_KEYS.every(function (k) { return a[k] === b[k]; }); }
+
+  // 当前排盘（上次填的）；本人八字单独保存
+  var B = bzLoad('zcym.bazi') || bzDefault();
+  var SELF = bzLoad('zcym.self');
 
   function saveB() { try { localStorage.setItem('zcym.bazi', JSON.stringify(B)); } catch (e) {} }
+
+  function bzText(o) {
+    if (o.mode === 'lunar') {
+      var l = Solar.fromYmd(o.y, o.m, o.d).getLunar();
+      return '农历' + l.getYear() + '年' + lunarText(l) + (o.noTime ? '' : ' ' + pad(o.h) + ':' + pad(o.mi));
+    }
+    return o.y + '年' + o.m + '月' + o.d + '日' + (o.noTime ? '' : ' ' + pad(o.h) + ':' + pad(o.mi));
+  }
 
   function opt(v, label, sel) { return '<option value="' + v + '"' + (sel ? ' selected' : '') + '>' + label + '</option>'; }
 
@@ -569,6 +587,13 @@
 
     paint(v,
       '<header class="topbar"><span class="ib"></span><h1>八字</h1><span class="ib"></span></header>',
+      '<div class="bz-self">' +
+        '<div class="bz-self-t"><b>本人八字</b>' + (SELF ? bzText(SELF) : '<span class="bz-dim">未设置</span>') + '</div>' +
+        '<div class="bz-self-b">' +
+          (SELF ? '<button class="chip' + (bzSame(B, SELF) ? ' on' : '') + '" data-act="bzself">看本人</button>' : '') +
+          '<button class="chip" data-act="bzsetself">' + (SELF ? '改为当前' : '设为本人') + '</button>' +
+          '<button class="chip" data-act="bznew">新排盘</button>' +
+        '</div></div>' +
       '<div class="bz-form">' +
         '<div class="bz-row"><label>历法</label><div class="seg2">' +
           '<button data-act="bzmode" data-v="solar" class="' + (B.mode === 'solar' ? 'on' : '') + '">阳历</button>' +
@@ -780,6 +805,19 @@
       case 'wopen': openWheel(); break;
       case 'wok': closeWheel(true); break;
       case 'wcancel': closeWheel(false); break;
+      case 'bzself':
+        if (SELF) { B = bzCopy(SELF); saveB(); renderBazi(); }
+        break;
+      case 'bzsetself':
+        if (!SELF || confirm('把当前填的出生时间设为本人八字？')) {
+          SELF = bzCopy(B);
+          try { localStorage.setItem('zcym.self', JSON.stringify(SELF)); } catch (err) {}
+          toast('已设为本人八字');
+          renderBazi();
+        }
+        break;
+      case 'bznew':
+        B = bzDefault(); saveB(); renderBazi(); break;
       case 'bzmode': B.mode = a.dataset.v; saveB(); renderBazi(); break;
       case 'bznotime': B.noTime = !B.noTime; saveB(); renderBazi(); break;
       case 'pickDay':
